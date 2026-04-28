@@ -7,9 +7,20 @@ public class Contact : MonoBehaviour
     public Vector2 size = Vector2.one * 4f;//Vector2.one ->new Vector2(1f,1f)
     public bool isConnected;
 
+    private bool isPlaying;
+
+    void Start()
+    {
+        isPlaying = true;
+    }
+
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.green;
+        Gizmos.color = isConnected ? Color.green : Color.red;
+        if(!isPlaying)
+        {
+            Gizmos.color = Color.white;
+        }
         Vector2 lineHeight = size * 0.5f;
         Vector3 offset = transform.position + transform.up * lineHeight.y;
         Gizmos.DrawLine(offset, offset + transform.forward);//Gizmos.DrawLine(start point, end point)

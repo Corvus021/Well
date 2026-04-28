@@ -4,6 +4,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+public enum DungeonGenerator
+{
+    inactive,
+    generatingMain,
+    generatingBranches,
+    cleanup,
+    completed
+}
 public class DungeonMaster : MonoBehaviour
 {
     public GameObject[] startRoom;
@@ -29,6 +37,7 @@ public class DungeonMaster : MonoBehaviour
     [Range(0,1f)]public float buildTime;
 
     [Header("Room List")]
+    public DungeonGenerator dungeonGenerator = DungeonGenerator.inactive;
     public List<Tile> generatedTiles = new List<Tile>();
 
     List<Contact> availableContacts = new List<Contact>();
@@ -57,7 +66,7 @@ public class DungeonMaster : MonoBehaviour
         tileRoot = CreateStartRoom();
         DebugRoomLighting(tileRoot, Color.purple);
         tileTo = tileRoot;
-        ConnectTiles();
+        dungeonGenerator = DungeonGenerator.generatingMain;
         for (int i = 0; i < mainLength - 1; i++)
         {
             yield return new WaitForSeconds(buildTime);
@@ -82,8 +91,9 @@ public class DungeonMaster : MonoBehaviour
                 }
             }
         }
+        dungeonGenerator = DungeonGenerator.generatingBranches;
         //braching
-        for(int x = 0; x < branchNumber; x++)
+        for (int x = 0; x < branchNumber; x++)
         {
             if(availableContacts.Count>0)
             {
@@ -113,8 +123,55 @@ public class DungeonMaster : MonoBehaviour
                 break;
             }
         }
+        dungeonGenerator = DungeonGenerator.cleanup;
         RestoreLight();
+        yield return new WaitForSeconds(buildTime);
         DeleteBoxes();
+        BlockedPassages();
+        GenerateDoors();//There¡¯s a problem with the transform on doors :( it needs fixing
+        dungeonGenerator = DungeonGenerator.completed;
+        yield return null;
+    }
+    void GenerateDoors()
+    {
+        if(doorPercent > 0)
+        {
+            Contact[] allContacts = transform.GetComponentsInChildren<Contact>();
+            for(int i=0;i<allContacts.Length;i++)
+            {
+                Contact generatedContact = allContacts[i];
+                if(generatedContact.isConnected)
+                {
+                    int roll = Random.Range(1, 101);
+                    if (roll <= doorPercent)
+                    {
+                        Vector3 halfExtents = new Vector3(generatedContact.size.x, 1f, generatedContact.size.x);
+                        Vector3 generatedContactPosition = generatedContact.transform.position;
+                        Vector3 offset = Vector3.up * 0.5f;
+                        Collider[] hits = Physics.OverlapBox(generatedContactPosition + offset, halfExtents, Quaternion.identity, LayerMask.GetMask("Door"));
+                        if (hits.Length == 0)
+                        {
+                            int doorIndex = Random.Range(0, Door.Length);
+                            GameObject generatedDoor = Instantiate(Door[doorIndex], generatedContactPosition, generatedContact.transform.rotation * Quaternion.Euler(90f, 0f, 0f), generatedContact.transform);
+                            generatedDoor.name = Door[doorIndex].name;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    void BlockedPassages()
+    {
+        foreach(Contact contact in transform.GetComponentsInChildren<Contact>())
+        {
+            if (!contact.isConnected)
+            {
+                Vector3 unconnectedPosition = contact.transform.position;
+                int wallIndex = Random.Range(0, blockedWall.Length);
+                GameObject generatedWall = Instantiate(blockedWall[wallIndex], unconnectedPosition, contact.transform.rotation * Quaternion.Euler(-90f, 0f, 0f), contact.transform);
+                generatedWall.name = blockedWall[wallIndex].name;
+            }
+        }
     }
     void CollisionCheck()
     {
