@@ -14,27 +14,27 @@ public enum DungeonGenerator
 }
 public class DungeonMaster : MonoBehaviour
 {
-    public GameObject[] startRoom;
-    public GameObject[] randomRoom;
-    public GameObject[] endRoom;
-    public GameObject[] blockedWall;
-    public GameObject[] Door;
+    [SerializeField] GameObject[] startRoom;
+    [SerializeField] GameObject[] randomRoom;
+    [SerializeField] GameObject[] endRoom;
+    [SerializeField] GameObject[] blockedWall;
+    [SerializeField] GameObject[] Door;
 
     [Header("Debugging Options")]
-    public bool useColliders;
-    public bool useLights;
-    public bool restoreLights;
+    [SerializeField] bool useColliders;
+    [SerializeField] bool useLights;
+    [SerializeField] bool restoreLights;
 
     [Header("Key Options")]
     public KeyCode reloadKey = KeyCode.F;
     public KeyCode changeMapKey = KeyCode.R;
 
     [Header("Ceneration Limits")]
-    [Range(2,100)]public int mainLength = 10;
-    [Range(0, 50)] public int branchLength = 5;
-    [Range(0, 100)] public int branchNumber = 10;
-    [Range(0, 100)] public int doorPercent = 25;
-    [Range(0,1f)]public float buildTime;
+    [Range(2,100)] [SerializeField] int mainLength = 10;
+    [Range(0, 50)] [SerializeField] int branchLength = 5;
+    [Range(0, 100)] [SerializeField] int branchNumber = 10;
+    [Range(0, 100)] [SerializeField] int doorPercent = 25;
+    [Range(0,1f)] [SerializeField] float buildTime;
 
     [Header("Room List")]
     public DungeonGenerator dungeonGenerator = DungeonGenerator.inactive;
@@ -67,18 +67,22 @@ public class DungeonMaster : MonoBehaviour
         DebugRoomLighting(tileRoot, Color.purple);
         tileTo = tileRoot;
         dungeonGenerator = DungeonGenerator.generatingMain;
-        for (int i = 0; i < mainLength - 1; i++)
+        while (generatedTiles.Count < mainLength)
         {
             yield return new WaitForSeconds(buildTime);
             tileFrom = tileTo;
-            tileTo = CreateRandomRoom();
-            DebugRoomLighting(tileTo, Color.yellow);
+            if (generatedTiles.Count == mainLength - 1)
+            {
+                tileTo = CreateEndRoom();
+                DebugRoomLighting(tileTo, Color.blue);
+            }
+            else
+            {
+                tileTo = CreateRandomRoom();
+                DebugRoomLighting(tileTo, Color.yellow);
+            }
             ConnectTiles();
             CollisionCheck();
-            if (attempts >= maxAttempts)
-            {
-                break;
-            }
         }
         //put all not connected contact(in the mainPath) in "mainPath"
         foreach (Contact contact in path.GetComponentsInChildren<Contact>())
@@ -258,9 +262,17 @@ public class DungeonMaster : MonoBehaviour
                 //retry
                 if (tileFrom != null)
                 {
-                    tileTo = CreateRandomRoom();
-                    Color retryColor = path.name.Contains("Branch") ? Color.green : Color.yellow;
-                    DebugRoomLighting(tileTo, retryColor * 2f);
+                    if (generatedTiles.Count == mainLength - 1)
+                    {
+                        tileTo = CreateEndRoom();
+                        DebugRoomLighting(tileTo, Color.blue);
+                    }
+                    else
+                    {
+                        tileTo = CreateRandomRoom();
+                        Color retryColor = path.name.Contains("Branch") ? Color.green : Color.yellow;
+                        DebugRoomLighting(tileTo, retryColor * 2f);
+                    }
                     ConnectTiles();
                     CollisionCheck();
                 }
@@ -369,6 +381,15 @@ public class DungeonMaster : MonoBehaviour
         tile.transform.Rotate(0, roomRotation, 0);//give a random 90 rotation
         //add to generatedTile
         generatedTiles.Add(new Tile(tile.transform, null));
+        return tile.transform;
+    }
+    Transform CreateEndRoom()
+    {
+        int index = Random.Range(0, endRoom.Length);
+        GameObject tile = Instantiate(endRoom[index], transform.position, Quaternion.identity, path);
+        tile.name = "EndRoom";
+        Transform origin = generatedTiles[generatedTiles.FindIndex(includes => includes.tile == tileFrom)].tile;
+        generatedTiles.Add(new Tile(tile.transform, origin));
         return tile.transform;
     }
     Transform CreateRandomRoom()

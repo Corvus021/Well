@@ -180,10 +180,11 @@ MonoBehaviour:
   reloadKey: 102
   changeMapKey: 114
   mainLength: 10
-  branchLength: 5
+  branchLength: 10
   branchNumber: 10
   doorPercent: 0
   buildTime: 0.1
+  dungeonGenerator: 0
   generatedTiles: []
 --- !u!4 &272106153
 Transform:
