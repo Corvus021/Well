@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 272106153}
   - component: {fileID: 272106152}
+  - component: {fileID: 272106154}
   m_Layer: 0
   m_Name: DungeonMaster
   m_TagString: Untagged
@@ -148,22 +149,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c93f452422a59a94faa69498f5f2bd65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DungeonMaster
+  navMeshSurface: {fileID: 272106154}
+  plantPrefab: {fileID: 4729039222161067424, guid: 2a589ebfe07d11a42ad7e9a586576394, type: 3}
+  herbivorePrefab: {fileID: 9096974191364796169, guid: 230417f595d80514fa91bc27a500521f, type: 3}
   startRoom:
   - {fileID: 4524232734426491002, guid: 328c59ed6684a7447a18abc3eae1e98a, type: 3}
   - {fileID: 8584241690822825957, guid: 2ece749b5e08f024a8f7bf9a36dd64f2, type: 3}
   - {fileID: 6139543138532167708, guid: 50824bb3634a6c343883fa22d63c11a5, type: 3}
   randomRoom:
-  - {fileID: 4599895654754926556, guid: 46be266bba0d81d43bc1b46b1c784675, type: 3}
-  - {fileID: 3571772281507026865, guid: e5db9de4aea17054ead48da8d1235e31, type: 3}
-  - {fileID: 7811303100681001339, guid: 47cc627ae0ad7524a9d8642dcde052e1, type: 3}
-  - {fileID: 8477884934793281197, guid: 4c77dbf5b1461be43ad5cb264d9f2995, type: 3}
-  - {fileID: 4896885538974801634, guid: e18f20182fc979d418d05dd8d5877ce1, type: 3}
   - {fileID: 4234120801664827616, guid: f400b9cafd75eec468820bdde3c25760, type: 3}
   - {fileID: 4229390242385030743, guid: b07345458dfba53468ad9f9ec47951ef, type: 3}
   - {fileID: 174489487459942445, guid: 3b553351758f0da41ab353dce0d92b2e, type: 3}
   - {fileID: 8523933977641417263, guid: 604c7b5272182a34d9847a9874a4505e, type: 3}
   - {fileID: 7220459445017669835, guid: 2c0544d28d27e3242a9bae497f62a4d6, type: 3}
   - {fileID: 1766551281353000274, guid: 4f472db67759a284aa37f4417f0a1bee, type: 3}
+  hallRoom:
+  - {fileID: 4599895654754926556, guid: 46be266bba0d81d43bc1b46b1c784675, type: 3}
+  - {fileID: 3571772281507026865, guid: e5db9de4aea17054ead48da8d1235e31, type: 3}
+  - {fileID: 7811303100681001339, guid: 47cc627ae0ad7524a9d8642dcde052e1, type: 3}
+  - {fileID: 8477884934793281197, guid: 4c77dbf5b1461be43ad5cb264d9f2995, type: 3}
+  - {fileID: 4896885538974801634, guid: e18f20182fc979d418d05dd8d5877ce1, type: 3}
+  beginnerRoom:
+  - {fileID: 8523933977641417263, guid: 604c7b5272182a34d9847a9874a4505e, type: 3}
+  - {fileID: 4234120801664827616, guid: f400b9cafd75eec468820bdde3c25760, type: 3}
+  - {fileID: 4229390242385030743, guid: b07345458dfba53468ad9f9ec47951ef, type: 3}
+  - {fileID: 174489487459942445, guid: 3b553351758f0da41ab353dce0d92b2e, type: 3}
+  intermediateRoom:
+  - {fileID: 4234120801664827616, guid: f400b9cafd75eec468820bdde3c25760, type: 3}
+  - {fileID: 4229390242385030743, guid: b07345458dfba53468ad9f9ec47951ef, type: 3}
+  - {fileID: 174489487459942445, guid: 3b553351758f0da41ab353dce0d92b2e, type: 3}
+  - {fileID: 8523933977641417263, guid: 604c7b5272182a34d9847a9874a4505e, type: 3}
+  advancedRoom:
+  - {fileID: 1766551281353000274, guid: 4f472db67759a284aa37f4417f0a1bee, type: 3}
+  - {fileID: 7220459445017669835, guid: 2c0544d28d27e3242a9bae497f62a4d6, type: 3}
   endRoom:
   - {fileID: 4524232734426491002, guid: 328c59ed6684a7447a18abc3eae1e98a, type: 3}
   - {fileID: 8584241690822825957, guid: 2ece749b5e08f024a8f7bf9a36dd64f2, type: 3}
@@ -176,16 +194,15 @@ MonoBehaviour:
   - {fileID: 1340668788167331564, guid: 7f522b6eada8bca40861fdf7496d34b5, type: 3}
   useColliders: 0
   useLights: 1
-  restoreLights: 1
+  restoreLights: 0
   reloadKey: 102
   changeMapKey: 114
-  mainLength: 10
+  mainLength: 20
   branchLength: 10
   branchNumber: 10
   doorPercent: 0
   buildTime: 0.1
   dungeonGenerator: 0
-  generatedTiles: []
 --- !u!4 &272106153
 Transform:
   m_ObjectHideFlags: 0
@@ -201,6 +218,38 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &272106154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 272106151}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 0
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 64
+  m_UseGeometry: 0
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 0}
+  m_BuildHeightMesh: 0
 --- !u!1 &559959599 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4244101088084187529, guid: a5d7a737600b63040a1ec9bb3ee1e9dc, type: 3}

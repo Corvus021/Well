@@ -1,6 +1,5 @@
 using UnityEngine;
 
-
 [System.Serializable]
 public class Tile
 {
@@ -8,7 +7,10 @@ public class Tile
     public Transform origin;
     public Contact contact;
 
-    public Tile(Transform _tile,Transform _origin)
+    [System.NonSerialized]
+    public DungeonNode node;
+
+    public Tile(Transform _tile, Transform _origin)
     {
         tile = _tile;
         origin = _origin;
