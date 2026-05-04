@@ -152,6 +152,7 @@ MonoBehaviour:
   navMeshSurface: {fileID: 272106154}
   plantPrefab: {fileID: 4729039222161067424, guid: 2a589ebfe07d11a42ad7e9a586576394, type: 3}
   herbivorePrefab: {fileID: 9096974191364796169, guid: 230417f595d80514fa91bc27a500521f, type: 3}
+  scavengerPrefab: {fileID: 8444173635351289009, guid: 869a849fabf3b7743a589fa339f9a001, type: 3}
   startRoom:
   - {fileID: 4524232734426491002, guid: 328c59ed6684a7447a18abc3eae1e98a, type: 3}
   - {fileID: 8584241690822825957, guid: 2ece749b5e08f024a8f7bf9a36dd64f2, type: 3}
@@ -194,7 +195,7 @@ MonoBehaviour:
   - {fileID: 1340668788167331564, guid: 7f522b6eada8bca40861fdf7496d34b5, type: 3}
   useColliders: 0
   useLights: 1
-  restoreLights: 0
+  restoreLights: 1
   reloadKey: 102
   changeMapKey: 114
   mainLength: 20

@@ -22,6 +22,7 @@ public class DungeonMaster : MonoBehaviour
     [Header("Ecosystem")]
     [SerializeField] GameObject plantPrefab;
     [SerializeField] GameObject herbivorePrefab;
+    [SerializeField] GameObject scavengerPrefab;
 
     [Header("Dungeon")]
     [SerializeField] GameObject[] startRoom;
@@ -739,6 +740,7 @@ public class DungeonMaster : MonoBehaviour
 
             int plantCount = GetPlantCountForRoom(node.type);
             int herbivoreCount = GetHerbivoreCountForRoom(node.type);
+            int scavengerCount = GetScavengerCountForRoom(node.type);
 
             for (int i = 0; i < plantCount; i++)
             {
@@ -748,6 +750,11 @@ public class DungeonMaster : MonoBehaviour
             for (int i = 0; i < herbivoreCount; i++)
             {
                 SpawnInRoom(herbivorePrefab, node.roomTransform);
+            }
+
+            for (int i = 0; i < scavengerCount; i++)
+            {
+                SpawnInRoom(scavengerPrefab, node.roomTransform);
             }
         }
         int GetPlantCountForRoom(RoomType type)
@@ -786,6 +793,20 @@ public class DungeonMaster : MonoBehaviour
 
                 case RoomType.Advanced:
                     return Random.Range(0, 2);
+
+                default:
+                    return 0;
+            }
+        }
+        int GetScavengerCountForRoom(RoomType type)
+        {
+            switch (type)
+            {
+                case RoomType.Intermediate:
+                    return Random.Range(0, 2);
+
+                case RoomType.Advanced:
+                    return Random.Range(1, 3);
 
                 default:
                     return 0;
@@ -877,6 +898,8 @@ public class DungeonMaster : MonoBehaviour
         spawned.transform.position = hit.position;
     }
 }
+
+
 
 
 
