@@ -158,7 +158,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NaturalResources
   resourceType: 3
-  amount: 10
-  maxAmount: 10
+  amount: 50
+  maxAmount: 50
   regrowDelay: 5
   regrowRate: 1
+  corpseBoostRadius: 5
+  corpseRegrowMultiplier: 2

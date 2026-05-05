@@ -122,8 +122,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1965463923675001939}
   - component: {fileID: 7313920670788545676}
-  - component: {fileID: 5119735392824642664}
   - component: {fileID: 4506409790932498437}
+  - component: {fileID: -2193875439829191724}
   m_Layer: 0
   m_Name: Scavenger
   m_TagString: Untagged
@@ -168,28 +168,6 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.50171214
   m_Center: {x: 0, y: 0.53250164, z: 0}
---- !u!114 &5119735392824642664
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8444173635351289009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de28cec7d54acd14aafcdaa43948e285, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CreatureAI
-  deadBodyPrefab: {fileID: 5297313251303734429, guid: 22f40fe50c0ff6a4a8c8b89528e3cfef, type: 3}
-  foodType: 3
-  hunger: 0
-  maxHunger: 100
-  hungerRate: 5
-  eatRate: 10
-  speed: 2
-  searchRadius: 30
-  eatDistance: 1.2
-  wanderRadius: 5
 --- !u!195 &4506409790932498437
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -212,3 +190,20 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &-2193875439829191724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8444173635351289009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ff1c0e4ba483f046bcfe8e44591fba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScavengerAI
+  speed: 2
+  searchRadius: 100
+  interactDistance: 1.2
+  wanderRadius: 50
+  carriedFoodValue: 0

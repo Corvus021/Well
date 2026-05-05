@@ -22,7 +22,9 @@ public class DungeonMaster : MonoBehaviour
     [Header("Ecosystem")]
     [SerializeField] GameObject plantPrefab;
     [SerializeField] GameObject herbivorePrefab;
+    [SerializeField] GameObject carnivorePrefab;
     [SerializeField] GameObject scavengerPrefab;
+    [SerializeField] GameObject scavengerStoragePrefab;
 
     [Header("Dungeon")]
     [SerializeField] GameObject[] startRoom;
@@ -180,6 +182,7 @@ public class DungeonMaster : MonoBehaviour
 
         BuildNavigationMesh();
 
+        GenerateScavengerStorage();
         GenerateEcosystem();
 
         DeleteBoxes();
@@ -724,6 +727,24 @@ public class DungeonMaster : MonoBehaviour
 
         navMeshSurface.BuildNavMesh();
     }
+    void GenerateScavengerStorage()
+    {
+        if (scavengerStoragePrefab == null)
+        {
+            Debug.LogWarning("Scavenger storage prefab is missing.");
+            return;
+        }
+
+        DungeonNode bossNode = dungeonNodes.Find(node => node.type == RoomType.Boss);
+
+        if (bossNode == null || bossNode.roomTransform == null)
+        {
+            Debug.LogWarning("Could not find Boss room for scavenger storage.");
+            return;
+        }
+
+        SpawnInRoom(scavengerStoragePrefab, bossNode.roomTransform);
+    }
     void GenerateEcosystem()
     {
         foreach (DungeonNode node in dungeonNodes)
@@ -737,10 +758,11 @@ public class DungeonMaster : MonoBehaviour
             {
                 continue;
             }
-
             int plantCount = GetPlantCountForRoom(node.type);
             int herbivoreCount = GetHerbivoreCountForRoom(node.type);
+            int carnivoreCount = GetCarnivoreCountForRoom(node.type);
             int scavengerCount = GetScavengerCountForRoom(node.type);
+
 
             for (int i = 0; i < plantCount; i++)
             {
@@ -750,6 +772,11 @@ public class DungeonMaster : MonoBehaviour
             for (int i = 0; i < herbivoreCount; i++)
             {
                 SpawnInRoom(herbivorePrefab, node.roomTransform);
+            }
+
+            for (int i = 0; i < carnivoreCount; i++)
+            {
+                SpawnInRoom(carnivorePrefab, node.roomTransform);
             }
 
             for (int i = 0; i < scavengerCount; i++)
@@ -793,6 +820,20 @@ public class DungeonMaster : MonoBehaviour
 
                 case RoomType.Advanced:
                     return Random.Range(0, 2);
+
+                default:
+                    return 0;
+            }
+        }
+        int GetCarnivoreCountForRoom(RoomType type)
+        {
+            switch (type)
+            {
+                case RoomType.Intermediate:
+                    return Random.Range(0, 2);
+
+                case RoomType.Advanced:
+                    return Random.Range(1, 2);
 
                 default:
                     return 0;
@@ -898,6 +939,11 @@ public class DungeonMaster : MonoBehaviour
         spawned.transform.position = hit.position;
     }
 }
+
+
+
+
+
 
 
 

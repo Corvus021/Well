@@ -24,10 +24,18 @@ public class CreatureAI : MonoBehaviour
     public float eatDistance = 1.2f;
     public float wanderRadius = 5f;
 
+    [Header("Breeding")]
+    [SerializeField] GameObject offspringPrefab;
+    public float breedCooldown = 20f;
+    public float breedHungerThreshold = 0.25f;
+    public int maxLocalPopulation = 4;
+    public float populationCheckRadius = 8f;
+
     CreatureBehavior behavior;
     NaturalResources targetFood;
     Vector3 wanderTarget;
     NavMeshAgent agent;
+    float breedTimer;
     bool isDead;
 
     void Start()
@@ -51,6 +59,10 @@ public class CreatureAI : MonoBehaviour
             Die();
             return;
         }
+
+        breedTimer += Time.deltaTime;
+
+        TryBreed();
 
         if (hunger > maxHunger * 0.4f && targetFood == null)
         {
@@ -136,6 +148,11 @@ public class CreatureAI : MonoBehaviour
 
             float distance = Vector3.Distance(transform.position, resource.transform.position);
 
+            if (!CanReach(resource.transform.position))
+            {
+                continue;
+            }
+
             if (distance < nearestDistance)
             {
                 nearest = resource;
@@ -144,6 +161,23 @@ public class CreatureAI : MonoBehaviour
         }
 
         return nearest;
+    }
+
+    bool CanReach(Vector3 target)
+    {
+        if (agent == null || !agent.isOnNavMesh)
+        {
+            return true;
+        }
+
+        NavMeshPath path = new NavMeshPath();
+
+        if (!agent.CalculatePath(target, path))
+        {
+            return false;
+        }
+
+        return path.status == NavMeshPathStatus.PathComplete;
     }
 
     void MoveTo(Vector3 target)
@@ -168,18 +202,27 @@ public class CreatureAI : MonoBehaviour
 
     void PickWanderTarget()
     {
-        Vector2 random = Random.insideUnitCircle * wanderRadius;
-        Vector3 randomTarget = transform.position + new Vector3(random.x, 0f, random.y);
-
-        if (TryGetNavMeshPoint(randomTarget, out Vector3 navMeshTarget))
+        for (int i = 0; i < 20; i++)
         {
+            Vector2 random = Random.insideUnitCircle * wanderRadius;
+            Vector3 randomTarget = transform.position + new Vector3(random.x, 0f, random.y);
+
+            if (!TryGetNavMeshPoint(randomTarget, out Vector3 navMeshTarget))
+            {
+                continue;
+            }
+
+            if (!CanReach(navMeshTarget))
+            {
+                continue;
+            }
+
             wanderTarget = navMeshTarget;
-        }
-        else
-        {
-            wanderTarget = randomTarget;
+            behavior = CreatureBehavior.Wander;
+            return;
         }
 
+        wanderTarget = transform.position;
         behavior = CreatureBehavior.Wander;
     }
 
@@ -209,5 +252,94 @@ public class CreatureAI : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    public void Kill()
+    {
+        if (isDead)
+        {
+            return;
+        }
+
+        Die();
+    }
+
+    void TryBreed()
+    {
+        if (offspringPrefab == null)
+        {
+            return;
+        }
+
+        if (breedTimer < breedCooldown)
+        {
+            return;
+        }
+
+        if (hunger > maxHunger * breedHungerThreshold)
+        {
+            return;
+        }
+
+        int localPopulation = CountLocalPopulation();
+
+        if (localPopulation >= maxLocalPopulation)
+        {
+            return;
+        }
+
+        if (!TryGetSpawnNearSelf(out Vector3 spawnPosition))
+        {
+            return;
+        }
+
+        Instantiate(offspringPrefab, spawnPosition, transform.rotation, transform.parent);
+        breedTimer = 0f;
+    }
+    int CountLocalPopulation()
+    {
+        CreatureAI[] creatures = FindObjectsByType<CreatureAI>(FindObjectsSortMode.None);
+        int count = 0;
+
+        foreach (CreatureAI creature in creatures)
+        {
+            if (creature.foodType != foodType)
+            {
+                continue;
+            }
+
+            float distance = Vector3.Distance(transform.position, creature.transform.position);
+
+            if (distance <= populationCheckRadius)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+    bool TryGetSpawnNearSelf(out Vector3 spawnPosition)
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            Vector2 random = Random.insideUnitCircle * 2f;
+            Vector3 candidate = transform.position + new Vector3(random.x, 0f, random.y);
+
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            {
+                continue;
+            }
+
+            if (!CanReach(hit.position))
+            {
+                continue;
+            }
+
+            spawnPosition = hit.position;
+            return true;
+        }
+
+        spawnPosition = transform.position;
+        return false;
     }
 }

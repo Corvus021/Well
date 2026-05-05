@@ -727,11 +727,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NaturalResources
   resourceType: 0
-  amount: 10
-  maxAmount: 10
-  regrowDelay: 5
+  amount: 30
+  maxAmount: 30
+  regrowDelay: 10
   regrowRate: 1
-  corpseBoostRadius: 20
+  corpseBoostRadius: 30
   corpseRegrowMultiplier: 2
 --- !u!1 &5152735741758027916
 GameObject:
