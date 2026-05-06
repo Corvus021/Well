@@ -161,13 +161,18 @@ MonoBehaviour:
   deadBodyPrefab: {fileID: 5297313251303734429, guid: 22f40fe50c0ff6a4a8c8b89528e3cfef, type: 3}
   foodType: 0
   hunger: 0
-  maxHunger: 100
+  maxHunger: 200
   hungerRate: 5
   eatRate: 10
   speed: 2
   searchRadius: 30
   eatDistance: 1.2
   wanderRadius: 10
+  dangerRadius: 8
+  safeDistance: 12
+  fleeDistance: 6
+  fleeStuckCheckTime: 1
+  fleeStuckDistance: 0.2
   offspringPrefab: {fileID: 9096974191364796169}
   breedCooldown: 20
   breedHungerThreshold: 0.25

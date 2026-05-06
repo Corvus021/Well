@@ -182,9 +182,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CarnivoreAI
   deadBodyPrefab: {fileID: 9109811380640993993, guid: 1c685e0dee382f1468ac50d7d32ce781, type: 3}
   hunger: 0
-  maxHunger: 200
+  maxHunger: 150
   hungerRate: 1
   hungerRestoredPerKill: 60
+  health: 100
+  maxHealth: 100
+  randomizeHealthOnStart: 1
+  minRandomHealth: 80
+  maxRandomHealth: 120
+  healthRegenRate: 3
   speed: 4
   searchRadius: 100
   attackDistance: 1.3
@@ -192,3 +198,18 @@ MonoBehaviour:
   corpseEatRate: 15
   huntHungerThreshold: 0.35
   attackCooldown: 1
+  sex: 1
+  randomizeSexOnStart: 1
+  rivalSearchRadius: 10
+  rivalFightDistance: 1.4
+  rivalAttackDamage: 15
+  rivalAttackCooldown: 1.5
+  rivalRetreatDistance: 3
+  rivalRetreatDuration: 1
+  offspringPrefab: {fileID: 5200611378926602744}
+  targetCarnivorePopulation: 6
+  breedCooldown: 30
+  breedHungerThreshold: 0.35
+  mateSearchRadius: 50
+  breedDistance: 5
+  birthProtectionDuration: 100

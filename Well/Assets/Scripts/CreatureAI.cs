@@ -5,7 +5,8 @@ public enum CreatureBehavior
 {
     Wander,
     Hunting,
-    Eat
+    Eat,
+    Flee
 }
 public class CreatureAI : MonoBehaviour
 {
@@ -24,6 +25,14 @@ public class CreatureAI : MonoBehaviour
     public float eatDistance = 1.2f;
     public float wanderRadius = 5f;
 
+    [Header("Flee")]
+    public float dangerRadius = 8f;
+    public float safeDistance = 12f;
+    public float fleeDistance = 6f;
+    public float fleeStuckCheckTime = 1f;
+    public float fleeStuckDistance = 0.2f;
+    public float fleeStuckTurnAngle = 30f;
+
     [Header("Breeding")]
     [SerializeField] GameObject offspringPrefab;
     public float breedCooldown = 20f;
@@ -33,9 +42,14 @@ public class CreatureAI : MonoBehaviour
 
     CreatureBehavior behavior;
     NaturalResources targetFood;
+    CarnivoreAI targetPredator;
     Vector3 wanderTarget;
+    Vector3 fleeTarget;
+    Vector3 lastFleeCheckPosition;
+    Vector3 lastFleeMoveDirection;
     NavMeshAgent agent;
     float breedTimer;
+    float fleeStuckTimer;
     bool isDead;
 
     void Start()
@@ -64,7 +78,9 @@ public class CreatureAI : MonoBehaviour
 
         TryBreed();
 
-        if (hunger > maxHunger * 0.4f && targetFood == null)
+        UpdatePredatorAwareness();
+
+        if (behavior != CreatureBehavior.Flee && hunger > maxHunger * 0.4f && targetFood == null)
         {
             behavior = CreatureBehavior.Hunting;
         }
@@ -81,6 +97,10 @@ public class CreatureAI : MonoBehaviour
 
             case CreatureBehavior.Eat:
                 UpdateEat();
+                break;
+
+            case CreatureBehavior.Flee:
+                UpdateFlee();
                 break;
         }
     }
@@ -132,6 +152,225 @@ public class CreatureAI : MonoBehaviour
             PickWanderTarget();
         }
     }
+
+    void UpdateFlee()
+    {
+        if (targetPredator == null)
+        {
+            PickWanderTarget();
+            return;
+        }
+
+        float predatorDistance = Vector3.Distance(transform.position, targetPredator.transform.position);
+
+        if (predatorDistance >= safeDistance)
+        {
+            targetPredator = null;
+            targetFood = null;
+            PickWanderTarget();
+            return;
+        }
+
+        if (Vector3.Distance(transform.position, fleeTarget) < 0.5f)
+        {
+            PickFleeTarget();
+        }
+
+        UpdateFleeStuckCheck();
+
+        MoveTo(fleeTarget);
+    }
+
+    void UpdateFleeStuckCheck()
+    {
+        fleeStuckTimer += Time.deltaTime;
+
+        if (fleeStuckTimer < fleeStuckCheckTime)
+        {
+            return;
+        }
+
+        float movedDistance = Vector3.Distance(transform.position, lastFleeCheckPosition);
+        Vector3 movedDirection = transform.position - lastFleeCheckPosition;
+        lastFleeCheckPosition = transform.position;
+        fleeStuckTimer = 0f;
+
+        if (movedDistance >= fleeStuckDistance)
+        {
+            lastFleeMoveDirection = movedDirection.normalized;
+            return;
+        }
+
+        PickFleeTargetAfterStuck();
+    }
+
+    void UpdatePredatorAwareness()
+    {
+        CarnivoreAI nearestPredator = FindNearestPredator();
+
+        if (nearestPredator == null)
+        {
+            return;
+        }
+
+        if (behavior == CreatureBehavior.Flee && nearestPredator == targetPredator)
+        {
+            return;
+        }
+
+        targetPredator = nearestPredator;
+        targetFood = null;
+        PickFleeTarget();
+    }
+
+    CarnivoreAI FindNearestPredator()
+    {
+        CarnivoreAI[] predators = FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None);
+
+        CarnivoreAI nearest = null;
+        float nearestDistance = dangerRadius;
+
+        foreach (CarnivoreAI predator in predators)
+        {
+            float distance = Vector3.Distance(transform.position, predator.transform.position);
+
+            if (distance < nearestDistance && CanReach(predator.transform.position))
+            {
+                nearest = predator;
+                nearestDistance = distance;
+            }
+        }
+
+        return nearest;
+    }
+
+    void PickFleeTarget()
+    {
+        if (targetPredator == null)
+        {
+            fleeTarget = transform.position;
+            behavior = CreatureBehavior.Flee;
+            return;
+        }
+
+        Vector3 awayDirection = transform.position - targetPredator.transform.position;
+        awayDirection.y = 0f;
+
+        if (awayDirection.sqrMagnitude < 0.01f)
+        {
+            Vector2 randomDirection = Random.insideUnitCircle.normalized;
+            awayDirection = new Vector3(randomDirection.x, 0f, randomDirection.y);
+        }
+
+        awayDirection.Normalize();
+
+        for (int i = 0; i < 12; i++)
+        {
+            Vector2 randomOffset = Random.insideUnitCircle * 2f;
+            Vector3 candidate = transform.position + awayDirection * fleeDistance + new Vector3(randomOffset.x, 0f, randomOffset.y);
+
+            if (!TryGetNavMeshPoint(candidate, out Vector3 navMeshTarget))
+            {
+                continue;
+            }
+
+            if (!CanReach(navMeshTarget))
+            {
+                continue;
+            }
+
+            float oldDistance = Vector3.Distance(transform.position, targetPredator.transform.position);
+            float newDistance = Vector3.Distance(navMeshTarget, targetPredator.transform.position);
+
+            if (newDistance <= oldDistance)
+            {
+                continue;
+            }
+
+            fleeTarget = navMeshTarget;
+            lastFleeCheckPosition = transform.position;
+            fleeStuckTimer = 0f;
+            behavior = CreatureBehavior.Flee;
+            return;
+        }
+
+        fleeTarget = transform.position;
+        lastFleeCheckPosition = transform.position;
+        fleeStuckTimer = 0f;
+        behavior = CreatureBehavior.Flee;
+    }
+
+    void PickFleeTargetAfterStuck()
+    {
+        Vector3 baseDirection = -lastFleeMoveDirection;
+        baseDirection.y = 0f;
+
+        if (baseDirection.sqrMagnitude < 0.01f && targetPredator != null)
+        {
+            baseDirection = transform.position - targetPredator.transform.position;
+            baseDirection.y = 0f;
+        }
+
+        if (baseDirection.sqrMagnitude < 0.01f)
+        {
+            baseDirection = -transform.forward;
+            baseDirection.y = 0f;
+        }
+
+        baseDirection.Normalize();
+
+        float side = Random.value < 0.5f ? -1f : 1f;
+        float firstAngle = fleeStuckTurnAngle * side;
+
+        if (TryPickFleeTargetInDirection(Quaternion.Euler(0f, firstAngle, 0f) * baseDirection))
+        {
+            return;
+        }
+
+        if (TryPickFleeTargetInDirection(Quaternion.Euler(0f, -firstAngle, 0f) * baseDirection))
+        {
+            return;
+        }
+
+        PickFleeTarget();
+    }
+
+    bool TryPickFleeTargetInDirection(Vector3 direction)
+    {
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.01f)
+        {
+            return false;
+        }
+
+        direction.Normalize();
+
+        for (int i = 0; i < 6; i++)
+        {
+            float distance = fleeDistance * Mathf.Lerp(0.6f, 1.2f, i / 5f);
+            Vector3 candidate = transform.position + direction * distance;
+
+            if (!TryGetNavMeshPoint(candidate, out Vector3 navMeshTarget))
+            {
+                continue;
+            }
+
+            if (!CanReach(navMeshTarget))
+            {
+                continue;
+            }
+
+            fleeTarget = navMeshTarget;
+            lastFleeCheckPosition = transform.position;
+            fleeStuckTimer = 0f;
+            behavior = CreatureBehavior.Flee;
+            return true;
+        }
+
+        return false;
+    }
+
     NaturalResources FindNearestFood()
     {
         NaturalResources[] resources = FindObjectsByType<NaturalResources>(FindObjectsSortMode.None);
