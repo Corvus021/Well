@@ -22,6 +22,19 @@ public class NaturalResources : MonoBehaviour
 
     float emptyTime;
 
+    void OnEnable()
+    {
+        EcosystemManager.Instance.Register(this);
+    }
+
+    void OnDisable()
+    {
+        if (EcosystemManager.HasInstance)
+        {
+            EcosystemManager.Instance.Unregister(this);
+        }
+    }
+
     public bool IsAvailable
     {
         get { return amount > 0f; }
@@ -68,9 +81,7 @@ public class NaturalResources : MonoBehaviour
             return regrowRate;
         }
 
-        NaturalResources[] resources = FindObjectsByType<NaturalResources>(FindObjectsSortMode.None);
-
-        foreach (NaturalResources resource in resources)
+        foreach (NaturalResources resource in EcosystemManager.Instance.resources)
         {
             if (resource == this || resource.resourceType != ResourceType.DeadBody || !resource.IsAvailable)
             {

@@ -9,6 +9,19 @@ public class ScavengerStorage : MonoBehaviour
     public float storedFood = 0f;
     public float foodConsumeRate = 5f;
 
+    void OnEnable()
+    {
+        EcosystemManager.Instance.Register(this);
+    }
+
+    void OnDisable()
+    {
+        if (EcosystemManager.HasInstance)
+        {
+            EcosystemManager.Instance.Unregister(this);
+        }
+    }
+
     void Update()
     {
         hunger += hungerRate * Time.deltaTime;

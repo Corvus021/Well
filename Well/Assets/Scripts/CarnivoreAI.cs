@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -17,7 +18,7 @@ public enum CarnivoreState
     Breed
 }
 
-public enum CarnivoreSex
+public enum CarnivoreGender
 {
     Male,
     Female
@@ -51,15 +52,26 @@ public class CarnivoreAI : MonoBehaviour
     public float huntHungerThreshold = 0.35f;
     public float attackCooldown = 1f;
 
-    [Header("Sex And Rivalry")]
-    public CarnivoreSex sex = CarnivoreSex.Female;
-    public bool randomizeSexOnStart = true;
+    [Header("Search Timing")]
+    public float targetSearchInterval = 0.4f;
+    public float rivalSearchInterval = 0.5f;
+    public float breedingSearchInterval = 1f;
+    public float genderBalanceInterval = 2f;
+
+    [Header("Gender And Rivalry")]
+    public CarnivoreGender gender = CarnivoreGender.Female;
+    public bool randomizeGenderOnStart = true;
     public float rivalSearchRadius = 10f;
     public float rivalFightDistance = 1.4f;
     public float rivalAttackDamage = 15f;
     public float rivalAttackCooldown = 1.5f;
     public float rivalRetreatDistance = 3f;
     public float rivalRetreatDuration = 1f;
+
+    [Header("Separation")]
+    public float separationRadius = 6f;
+    public float separationWeight = 4f;
+    public float birthScatterRadius = 8f;
 
     [Header("Breeding")]
     [SerializeField] GameObject offspringPrefab;
@@ -75,7 +87,7 @@ public class CarnivoreAI : MonoBehaviour
     NaturalResources targetCorpse;
     CarnivoreAI targetRival;
     CarnivoreAI targetMate;
-    NavMeshAgent agent;
+    NavMeshCreatureMotor motor;
     Vector3 wanderTarget;
     Vector3 rivalRetreatTarget;
     float attackTimer;
@@ -83,15 +95,37 @@ public class CarnivoreAI : MonoBehaviour
     float rivalRetreatTimer;
     float breedTimer;
     float birthProtectionTimer;
+    float targetSearchTimer;
+    float rivalSearchTimer;
+    float breedingSearchTimer;
+    float genderBalanceTimer;
     bool isDead;
+
+    void OnEnable()
+    {
+        EcosystemManager.Instance.Register(this);
+    }
+
+    void OnDisable()
+    {
+        if (EcosystemManager.HasInstance)
+        {
+            EcosystemManager.Instance.Unregister(this);
+        }
+    }
 
     void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
+        motor = GetComponent<NavMeshCreatureMotor>();
 
-        if (randomizeSexOnStart)
+        if (motor == null)
         {
-            sex = Random.value < 0.5f ? CarnivoreSex.Male : CarnivoreSex.Female;
+            motor = gameObject.AddComponent<NavMeshCreatureMotor>();
+        }
+
+        if (randomizeGenderOnStart)
+        {
+            gender = Random.value < 0.5f ? CarnivoreGender.Male : CarnivoreGender.Female;
         }
 
         if (randomizeHealthOnStart)
@@ -101,6 +135,10 @@ public class CarnivoreAI : MonoBehaviour
         }
 
         health = Mathf.Clamp(health, 0f, maxHealth);
+        targetSearchTimer = targetSearchInterval;
+        rivalSearchTimer = rivalSearchInterval;
+        breedingSearchTimer = breedingSearchInterval;
+        genderBalanceTimer = genderBalanceInterval;
         PickWanderTarget();
     }
 
@@ -126,7 +164,7 @@ public class CarnivoreAI : MonoBehaviour
 
         RegenerateHealthWhileWandering();
 
-        MaintainBreedingSexBalance();
+        MaintainBreedingGenderBalance();
 
         UpdateRivalAwareness();
 
@@ -141,6 +179,11 @@ public class CarnivoreAI : MonoBehaviour
             UpdateBreedingAwareness();
         }
 
+        UpdateCurrentState();
+    }
+
+    void UpdateCurrentState()
+    {
         switch (state)
         {
             case CarnivoreState.Wander:
@@ -205,6 +248,11 @@ public class CarnivoreAI : MonoBehaviour
 
     void UpdateFindPrey()
     {
+        if (!IsSearchReady(ref targetSearchTimer, targetSearchInterval))
+        {
+            return;
+        }
+
         targetPrey = FindNearestPrey();
         targetCorpse = FindNearestCorpse();
 
@@ -392,13 +440,23 @@ public class CarnivoreAI : MonoBehaviour
 
     void UpdateRivalAwareness()
     {
-        if (sex != CarnivoreSex.Male)
+        if (IsBirthProtected)
+        {
+            return;
+        }
+
+        if (gender != CarnivoreGender.Male)
         {
             return;
         }
 
         if (state == CarnivoreState.ChaseRival || state == CarnivoreState.FightRival ||
             state == CarnivoreState.RetreatFromRival)
+        {
+            return;
+        }
+
+        if (!IsSearchReady(ref rivalSearchTimer, rivalSearchInterval))
         {
             return;
         }
@@ -430,14 +488,19 @@ public class CarnivoreAI : MonoBehaviour
             return;
         }
 
-        CarnivoreAI[] carnivores = FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None);
-
-        if (carnivores.Length >= targetCarnivorePopulation)
+        if (!IsSearchReady(ref breedingSearchTimer, breedingSearchInterval))
         {
             return;
         }
 
-        EnsureBothSexesExist(carnivores);
+        List<CarnivoreAI> carnivores = EcosystemManager.Instance.carnivores;
+
+        if (carnivores.Count >= targetCarnivorePopulation)
+        {
+            return;
+        }
+
+        EnsureBothGendersExist(carnivores);
 
         if (IsValidMate(targetMate))
         {
@@ -462,20 +525,30 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.MoveToMate;
     }
 
-    void MaintainBreedingSexBalance()
+    void MaintainBreedingGenderBalance()
     {
-        CarnivoreAI[] carnivores = FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None);
-
-        if (carnivores.Length <= 0 || carnivores.Length >= targetCarnivorePopulation)
+        if (!IsSearchReady(ref genderBalanceTimer, genderBalanceInterval))
         {
             return;
         }
 
-        EnsureBothSexesExist(carnivores);
+        List<CarnivoreAI> carnivores = EcosystemManager.Instance.carnivores;
+
+        if (carnivores.Count <= 0 || carnivores.Count >= targetCarnivorePopulation)
+        {
+            return;
+        }
+
+        EnsureBothGendersExist(carnivores);
     }
 
     void UpdateFindMate()
     {
+        if (!IsSearchReady(ref breedingSearchTimer, breedingSearchInterval))
+        {
+            return;
+        }
+
         targetMate = FindNearestMate();
 
         if (targetMate == null)
@@ -496,7 +569,7 @@ public class CarnivoreAI : MonoBehaviour
             return;
         }
 
-        if (sex == CarnivoreSex.Female)
+        if (gender == CarnivoreGender.Female)
         {
             StopMoving();
 
@@ -534,7 +607,7 @@ public class CarnivoreAI : MonoBehaviour
 
         CarnivoreAI mate = targetMate;
 
-        if (sex != CarnivoreSex.Female)
+        if (gender != CarnivoreGender.Female)
         {
             StopMoving();
             return;
@@ -547,12 +620,10 @@ public class CarnivoreAI : MonoBehaviour
 
     CreatureAI FindNearestPrey()
     {
-        CreatureAI[] creatures = FindObjectsByType<CreatureAI>(FindObjectsSortMode.None);
-
         CreatureAI nearest = null;
-        float nearestDistance = searchRadius;
+        float bestScore = searchRadius;
 
-        foreach (CreatureAI creature in creatures)
+        foreach (CreatureAI creature in EcosystemManager.Instance.herbivores)
         {
             if (creature.foodType != ResourceType.Plant)
             {
@@ -561,7 +632,7 @@ public class CarnivoreAI : MonoBehaviour
 
             float distance = Vector3.Distance(transform.position, creature.transform.position);
 
-            if (distance > nearestDistance)
+            if (distance > searchRadius)
             {
                 continue;
             }
@@ -571,8 +642,13 @@ public class CarnivoreAI : MonoBehaviour
                 continue;
             }
 
-            nearest = creature;
-            nearestDistance = distance;
+            float score = distance + GetCarnivoreCrowdingPenalty(creature.transform.position);
+
+            if (score < bestScore)
+            {
+                nearest = creature;
+                bestScore = score;
+            }
         }
 
         return nearest;
@@ -580,12 +656,10 @@ public class CarnivoreAI : MonoBehaviour
 
     NaturalResources FindNearestCorpse()
     {
-        NaturalResources[] resources = FindObjectsByType<NaturalResources>(FindObjectsSortMode.None);
-
         NaturalResources nearest = null;
-        float nearestDistance = searchRadius;
+        float bestScore = searchRadius;
 
-        foreach (NaturalResources resource in resources)
+        foreach (NaturalResources resource in EcosystemManager.Instance.resources)
         {
             if (resource.resourceType != ResourceType.DeadBody || !resource.IsAvailable)
             {
@@ -594,7 +668,7 @@ public class CarnivoreAI : MonoBehaviour
 
             float distance = Vector3.Distance(transform.position, resource.transform.position);
 
-            if (distance > nearestDistance)
+            if (distance > searchRadius)
             {
                 continue;
             }
@@ -604,8 +678,13 @@ public class CarnivoreAI : MonoBehaviour
                 continue;
             }
 
-            nearest = resource;
-            nearestDistance = distance;
+            float score = distance + GetCarnivoreCrowdingPenalty(resource.transform.position);
+
+            if (score < bestScore)
+            {
+                nearest = resource;
+                bestScore = score;
+            }
         }
 
         return nearest;
@@ -630,12 +709,10 @@ public class CarnivoreAI : MonoBehaviour
 
     CarnivoreAI FindNearestRival()
     {
-        CarnivoreAI[] carnivores = FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None);
-
         CarnivoreAI nearest = null;
         float nearestDistance = rivalSearchRadius;
 
-        foreach (CarnivoreAI carnivore in carnivores)
+        foreach (CarnivoreAI carnivore in EcosystemManager.Instance.carnivores)
         {
             if (!IsValidRival(carnivore))
             {
@@ -663,12 +740,10 @@ public class CarnivoreAI : MonoBehaviour
 
     CarnivoreAI FindNearestMate()
     {
-        CarnivoreAI[] carnivores = FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None);
-
         CarnivoreAI nearest = null;
         float nearestDistance = mateSearchRadius;
 
-        foreach (CarnivoreAI carnivore in carnivores)
+        foreach (CarnivoreAI carnivore in EcosystemManager.Instance.carnivores)
         {
             if (!IsValidMate(carnivore))
             {
@@ -701,7 +776,7 @@ public class CarnivoreAI : MonoBehaviour
             return false;
         }
 
-        return sex == CarnivoreSex.Male && carnivore.sex == CarnivoreSex.Male &&
+        return !IsBirthProtected && gender == CarnivoreGender.Male && carnivore.gender == CarnivoreGender.Male &&
             !carnivore.isDead && !carnivore.IsBirthProtected;
     }
 
@@ -717,7 +792,7 @@ public class CarnivoreAI : MonoBehaviour
             return false;
         }
 
-        if (sex == carnivore.sex)
+        if (gender == carnivore.gender)
         {
             return false;
         }
@@ -757,7 +832,7 @@ public class CarnivoreAI : MonoBehaviour
         return true;
     }
 
-    void EnsureBothSexesExist(CarnivoreAI[] carnivores)
+    void EnsureBothGendersExist(List<CarnivoreAI> carnivores)
     {
         bool hasMale = false;
         bool hasFemale = false;
@@ -769,7 +844,7 @@ public class CarnivoreAI : MonoBehaviour
                 continue;
             }
 
-            if (carnivore.sex == CarnivoreSex.Male)
+            if (carnivore.gender == CarnivoreGender.Male)
             {
                 hasMale = true;
             }
@@ -802,7 +877,7 @@ public class CarnivoreAI : MonoBehaviour
             return;
         }
 
-        chosen.sex = hasMale ? CarnivoreSex.Female : CarnivoreSex.Male;
+        chosen.gender = hasMale ? CarnivoreGender.Female : CarnivoreGender.Male;
         chosen.targetMate = null;
         chosen.targetRival = null;
         chosen.PickWanderTarget();
@@ -815,7 +890,7 @@ public class CarnivoreAI : MonoBehaviour
             return;
         }
 
-        if (FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None).Length >= targetCarnivorePopulation)
+        if (EcosystemManager.Instance.carnivores.Count >= targetCarnivorePopulation)
         {
             return;
         }
@@ -833,6 +908,7 @@ public class CarnivoreAI : MonoBehaviour
         if (offspringAI != null)
         {
             offspringAI.ApplyBirthProtection();
+            offspringAI.ScatterFromBirth(transform.position, mate.transform.position);
         }
     }
 
@@ -855,6 +931,43 @@ public class CarnivoreAI : MonoBehaviour
         birthProtectionTimer = birthProtectionDuration;
         targetRival = null;
         targetMate = null;
+        PickWanderTarget();
+    }
+
+    public void ScatterFromBirth(Vector3 parentA, Vector3 parentB)
+    {
+        Vector3 parentCenter = (parentA + parentB) * 0.5f;
+        Vector3 awayDirection = transform.position - parentCenter;
+        awayDirection.y = 0f;
+
+        if (awayDirection.sqrMagnitude < 0.01f)
+        {
+            Vector2 randomDirection = Random.insideUnitCircle.normalized;
+            awayDirection = new Vector3(randomDirection.x, 0f, randomDirection.y);
+        }
+
+        awayDirection.Normalize();
+
+        for (int i = 0; i < 12; i++)
+        {
+            Vector2 randomOffset = Random.insideUnitCircle * 2f;
+            Vector3 candidate = transform.position + awayDirection * birthScatterRadius + new Vector3(randomOffset.x, 0f, randomOffset.y);
+
+            if (!TryGetNavMeshPoint(candidate, out Vector3 navMeshTarget))
+            {
+                continue;
+            }
+
+            if (!CanReach(navMeshTarget))
+            {
+                continue;
+            }
+
+            wanderTarget = navMeshTarget;
+            state = CarnivoreState.Wander;
+            return;
+        }
+
         PickWanderTarget();
     }
 
@@ -926,31 +1039,52 @@ public class CarnivoreAI : MonoBehaviour
         health = Mathf.Clamp(health, 0f, maxHealth);
     }
 
+    bool IsSearchReady(ref float timer, float interval)
+    {
+        timer += Time.deltaTime;
+
+        if (timer < interval)
+        {
+            return false;
+        }
+
+        timer = 0f;
+        return true;
+    }
+
+    float GetCarnivoreCrowdingPenalty(Vector3 targetPosition)
+    {
+        int nearbyCount = 0;
+
+        foreach (CarnivoreAI carnivore in EcosystemManager.Instance.carnivores)
+        {
+            if (carnivore == null || carnivore == this || carnivore.isDead)
+            {
+                continue;
+            }
+
+            if (Vector3.Distance(targetPosition, carnivore.transform.position) <= separationRadius)
+            {
+                nearbyCount++;
+            }
+        }
+
+        return nearbyCount * separationWeight;
+    }
+
     void MoveTo(Vector3 target)
     {
-        if (agent != null && agent.isOnNavMesh)
+        if (motor != null)
         {
-            agent.SetDestination(target);
-            return;
+            motor.MoveTo(target, speed);
         }
-
-        Vector3 direction = target - transform.position;
-        direction.y = 0f;
-
-        if (direction.sqrMagnitude < 0.01f)
-        {
-            return;
-        }
-
-        transform.position += direction.normalized * speed * Time.deltaTime;
-        transform.forward = direction.normalized;
     }
 
     void StopMoving()
     {
-        if (agent != null && agent.isOnNavMesh)
+        if (motor != null)
         {
-            agent.ResetPath();
+            motor.Stop();
         }
     }
 
@@ -982,31 +1116,18 @@ public class CarnivoreAI : MonoBehaviour
 
     bool TryGetNavMeshPoint(Vector3 point, out Vector3 navMeshPoint)
     {
-        if (NavMesh.SamplePosition(point, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+        if (motor == null)
         {
-            navMeshPoint = hit.position;
-            return true;
+            navMeshPoint = point;
+            return false;
         }
 
-        navMeshPoint = point;
-        return false;
+        return motor.TryGetNavMeshPoint(point, out navMeshPoint);
     }
 
     bool CanReach(Vector3 target)
     {
-        if (agent == null || !agent.isOnNavMesh)
-        {
-            return true;
-        }
-
-        NavMeshPath path = new NavMeshPath();
-
-        if (!agent.CalculatePath(target, path))
-        {
-            return false;
-        }
-
-        return path.status == NavMeshPathStatus.PathComplete;
+        return motor == null || motor.CanReach(target);
     }
 
     void Die()
@@ -1041,3 +1162,4 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 }
+

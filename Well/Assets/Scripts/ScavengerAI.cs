@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.AI;
 
 public enum ScavengerState
 {
@@ -22,19 +21,46 @@ public class ScavengerAI : MonoBehaviour
     public float interactDistance = 1.2f;
     public float wanderRadius = 5f;
 
+    [Header("Search Timing")]
+    public float corpseSearchInterval = 0.5f;
+    public float storageSearchInterval = 1f;
+
     public float carriedFoodValue;
 
     ScavengerState state;
     NaturalResources targetCorpse;
     GameObject carriedCorpseObject;
     ScavengerStorage storage;
-    NavMeshAgent agent;
+    NavMeshCreatureMotor motor;
     Vector3 wanderTarget;
+    float corpseSearchTimer;
+    float storageSearchTimer;
+
+    void OnEnable()
+    {
+        EcosystemManager.Instance.Register(this);
+    }
+
+    void OnDisable()
+    {
+        if (EcosystemManager.HasInstance)
+        {
+            EcosystemManager.Instance.Unregister(this);
+        }
+    }
 
     void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
-        storage = FindFirstObjectByType<ScavengerStorage>();
+        motor = GetComponent<NavMeshCreatureMotor>();
+
+        if (motor == null)
+        {
+            motor = gameObject.AddComponent<NavMeshCreatureMotor>();
+        }
+
+        corpseSearchTimer = corpseSearchInterval;
+        storageSearchTimer = storageSearchInterval;
+        storage = FindNearestStorage();
         PickWanderTarget();
     }
 
@@ -76,6 +102,11 @@ public class ScavengerAI : MonoBehaviour
 
     void UpdateFindCorpse()
     {
+        if (!IsSearchReady(ref corpseSearchTimer, corpseSearchInterval))
+        {
+            return;
+        }
+
         targetCorpse = FindNearestCorpse();
 
         if (targetCorpse == null)
@@ -109,7 +140,12 @@ public class ScavengerAI : MonoBehaviour
     {
         if (storage == null)
         {
-            storage = FindFirstObjectByType<ScavengerStorage>();
+            if (!IsSearchReady(ref storageSearchTimer, storageSearchInterval))
+            {
+                return;
+            }
+
+            storage = FindNearestStorage();
             PickWanderTarget();
             return;
         }
@@ -141,12 +177,10 @@ public class ScavengerAI : MonoBehaviour
 
     NaturalResources FindNearestCorpse()
     {
-        NaturalResources[] resources = FindObjectsByType<NaturalResources>(FindObjectsSortMode.None);
-
         NaturalResources nearest = null;
         float nearestDistance = searchRadius;
 
-        foreach (NaturalResources resource in resources)
+        foreach (NaturalResources resource in EcosystemManager.Instance.resources)
         {
             if (resource.resourceType != ResourceType.DeadBody || !resource.IsAvailable)
             {
@@ -165,12 +199,49 @@ public class ScavengerAI : MonoBehaviour
         return nearest;
     }
 
+    ScavengerStorage FindNearestStorage()
+    {
+        ScavengerStorage nearest = null;
+        float nearestDistance = float.MaxValue;
+
+        foreach (ScavengerStorage storageCandidate in EcosystemManager.Instance.scavengerStorages)
+        {
+            if (storageCandidate == null)
+            {
+                continue;
+            }
+
+            float distance = Vector3.Distance(transform.position, storageCandidate.transform.position);
+
+            if (distance < nearestDistance)
+            {
+                nearest = storageCandidate;
+                nearestDistance = distance;
+            }
+        }
+
+        return nearest;
+    }
+
     void MoveTo(Vector3 target)
     {
-        if (agent != null && agent.isOnNavMesh)
+        if (motor != null)
         {
-            agent.SetDestination(target);
+            motor.MoveTo(target, speed);
         }
+    }
+
+    bool IsSearchReady(ref float timer, float interval)
+    {
+        timer += Time.deltaTime;
+
+        if (timer < interval)
+        {
+            return false;
+        }
+
+        timer = 0f;
+        return true;
     }
 
     void PickUpCorpse(NaturalResources corpse)
@@ -202,9 +273,9 @@ public class ScavengerAI : MonoBehaviour
         Vector2 random = Random.insideUnitCircle * wanderRadius;
         Vector3 randomTarget = transform.position + new Vector3(random.x, 0f, random.y);
 
-        if (NavMesh.SamplePosition(randomTarget, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+        if (motor != null && motor.TryGetNavMeshPoint(randomTarget, out Vector3 navMeshTarget))
         {
-            wanderTarget = hit.position;
+            wanderTarget = navMeshTarget;
         }
         else
         {

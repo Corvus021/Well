@@ -25,6 +25,10 @@ public class CreatureAI : MonoBehaviour
     public float eatDistance = 1.2f;
     public float wanderRadius = 5f;
 
+    [Header("Search Timing")]
+    public float foodSearchInterval = 0.5f;
+    public float predatorSearchInterval = 0.25f;
+
     [Header("Flee")]
     public float dangerRadius = 8f;
     public float safeDistance = 12f;
@@ -47,14 +51,37 @@ public class CreatureAI : MonoBehaviour
     Vector3 fleeTarget;
     Vector3 lastFleeCheckPosition;
     Vector3 lastFleeMoveDirection;
-    NavMeshAgent agent;
+    NavMeshCreatureMotor motor;
     float breedTimer;
     float fleeStuckTimer;
+    float foodSearchTimer;
+    float predatorSearchTimer;
     bool isDead;
+
+    void OnEnable()
+    {
+        EcosystemManager.Instance.Register(this);
+    }
+
+    void OnDisable()
+    {
+        if (EcosystemManager.HasInstance)
+        {
+            EcosystemManager.Instance.Unregister(this);
+        }
+    }
 
     void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
+        motor = GetComponent<NavMeshCreatureMotor>();
+
+        if (motor == null)
+        {
+            motor = gameObject.AddComponent<NavMeshCreatureMotor>();
+        }
+
+        foodSearchTimer = foodSearchInterval;
+        predatorSearchTimer = predatorSearchInterval;
         PickWanderTarget();
     }
     // Update is called once per frame
@@ -85,6 +112,11 @@ public class CreatureAI : MonoBehaviour
             behavior = CreatureBehavior.Hunting;
         }
 
+        UpdateCurrentBehavior();
+    }
+
+    void UpdateCurrentBehavior()
+    {
         switch (behavior)
         {
             case CreatureBehavior.Wander:
@@ -104,6 +136,7 @@ public class CreatureAI : MonoBehaviour
                 break;
         }
     }
+
     void UpdateWander()
     {
         MoveTo(wanderTarget);
@@ -117,6 +150,11 @@ public class CreatureAI : MonoBehaviour
     {
         if (targetFood == null || !targetFood.IsAvailable)
         {
+            if (!IsSearchReady(ref foodSearchTimer, foodSearchInterval))
+            {
+                return;
+            }
+
             targetFood = FindNearestFood();
         }
 
@@ -206,6 +244,11 @@ public class CreatureAI : MonoBehaviour
 
     void UpdatePredatorAwareness()
     {
+        if (!IsSearchReady(ref predatorSearchTimer, predatorSearchInterval))
+        {
+            return;
+        }
+
         CarnivoreAI nearestPredator = FindNearestPredator();
 
         if (nearestPredator == null)
@@ -225,12 +268,10 @@ public class CreatureAI : MonoBehaviour
 
     CarnivoreAI FindNearestPredator()
     {
-        CarnivoreAI[] predators = FindObjectsByType<CarnivoreAI>(FindObjectsSortMode.None);
-
         CarnivoreAI nearest = null;
         float nearestDistance = dangerRadius;
 
-        foreach (CarnivoreAI predator in predators)
+        foreach (CarnivoreAI predator in EcosystemManager.Instance.carnivores)
         {
             float distance = Vector3.Distance(transform.position, predator.transform.position);
 
@@ -373,12 +414,10 @@ public class CreatureAI : MonoBehaviour
 
     NaturalResources FindNearestFood()
     {
-        NaturalResources[] resources = FindObjectsByType<NaturalResources>(FindObjectsSortMode.None);
-
         NaturalResources nearest = null;
         float nearestDistance = searchRadius;
 
-        foreach (NaturalResources resource in resources)
+        foreach (NaturalResources resource in EcosystemManager.Instance.resources)
         {
             if (resource.resourceType != foodType || !resource.IsAvailable)
             {
@@ -404,39 +443,28 @@ public class CreatureAI : MonoBehaviour
 
     bool CanReach(Vector3 target)
     {
-        if (agent == null || !agent.isOnNavMesh)
-        {
-            return true;
-        }
+        return motor == null || motor.CanReach(target);
+    }
 
-        NavMeshPath path = new NavMeshPath();
+    bool IsSearchReady(ref float timer, float interval)
+    {
+        timer += Time.deltaTime;
 
-        if (!agent.CalculatePath(target, path))
+        if (timer < interval)
         {
             return false;
         }
 
-        return path.status == NavMeshPathStatus.PathComplete;
+        timer = 0f;
+        return true;
     }
 
     void MoveTo(Vector3 target)
     {
-        if (agent != null && agent.isOnNavMesh)
+        if (motor != null)
         {
-            agent.SetDestination(target);
-            return;
+            motor.MoveTo(target, speed);
         }
-
-        Vector3 direction = target - transform.position;
-        direction.y = 0f;
-
-        if (direction.sqrMagnitude < 0.01f)
-        {
-            return;
-        }
-
-        transform.position += direction.normalized * speed * Time.deltaTime;
-        transform.forward = direction.normalized;
     }
 
     void PickWanderTarget()
@@ -467,14 +495,13 @@ public class CreatureAI : MonoBehaviour
 
     bool TryGetNavMeshPoint(Vector3 point, out Vector3 navMeshPoint)
     {
-        if (NavMesh.SamplePosition(point, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+        if (motor == null)
         {
-            navMeshPoint = hit.position;
-            return true;
+            navMeshPoint = point;
+            return false;
         }
 
-        navMeshPoint = point;
-        return false;
+        return motor.TryGetNavMeshPoint(point, out navMeshPoint);
     }
 
     void Die()
@@ -537,10 +564,9 @@ public class CreatureAI : MonoBehaviour
     }
     int CountLocalPopulation()
     {
-        CreatureAI[] creatures = FindObjectsByType<CreatureAI>(FindObjectsSortMode.None);
         int count = 0;
 
-        foreach (CreatureAI creature in creatures)
+        foreach (CreatureAI creature in EcosystemManager.Instance.herbivores)
         {
             if (creature.foodType != foodType)
             {
