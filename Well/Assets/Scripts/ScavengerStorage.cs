@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class ScavengerStorage : MonoBehaviour
 {
@@ -9,11 +9,13 @@ public class ScavengerStorage : MonoBehaviour
     public float storedFood = 0f;
     public float foodConsumeRate = 5f;
 
+    // Register this storage with the ecosystem manager
     void OnEnable()
     {
         EcosystemManager.Instance.Register(this);
     }
 
+    // Unregister this storage from the ecosystem manager
     void OnDisable()
     {
         if (EcosystemManager.HasInstance)
@@ -22,6 +24,7 @@ public class ScavengerStorage : MonoBehaviour
         }
     }
 
+    // Increase hunger and consume stored food to reduce it
     void Update()
     {
         hunger += hungerRate * Time.deltaTime;
@@ -36,6 +39,7 @@ public class ScavengerStorage : MonoBehaviour
         }
     }
 
+    // Add delivered corpse value to stored food
     public void ReceiveCorpse(float foodValue)
     {
         storedFood += foodValue;

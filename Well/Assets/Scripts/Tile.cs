@@ -10,6 +10,7 @@ public class Tile
     [System.NonSerialized]
     public DungeonNode node;
 
+    // Store a spawned room transform and its origin point
     public Tile(Transform _tile, Transform _origin)
     {
         tile = _tile;

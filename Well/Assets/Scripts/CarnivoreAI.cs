@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -101,11 +101,13 @@ public class CarnivoreAI : MonoBehaviour
     float genderBalanceTimer;
     bool isDead;
 
+    // Register this carnivore with the ecosystem manager
     void OnEnable()
     {
         EcosystemManager.Instance.Register(this);
     }
 
+    // Unregister this carnivore from the ecosystem manager
     void OnDisable()
     {
         if (EcosystemManager.HasInstance)
@@ -114,6 +116,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Initialize movement, stats, gender, and first wander target
     void Start()
     {
         motor = GetComponent<NavMeshCreatureMotor>();
@@ -142,6 +145,7 @@ public class CarnivoreAI : MonoBehaviour
         PickWanderTarget();
     }
 
+    // Update needs, awareness, breeding, and the active state
     void Update()
     {
         if (isDead)
@@ -182,6 +186,7 @@ public class CarnivoreAI : MonoBehaviour
         UpdateCurrentState();
     }
 
+    // Run behavior for the current carnivore state
     void UpdateCurrentState()
     {
         switch (state)
@@ -236,6 +241,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Wander until a higher-priority behavior starts
     void UpdateWander()
     {
         MoveTo(wanderTarget);
@@ -246,6 +252,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Choose between hunting prey or eating a closer corpse
     void UpdateFindPrey()
     {
         if (!IsSearchReady(ref targetSearchTimer, targetSearchInterval))
@@ -273,6 +280,7 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.ChasePrey;
     }
 
+    // Move toward the selected prey until attack range
     void UpdateChasePrey()
     {
         if (targetPrey == null)
@@ -289,6 +297,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Move toward the selected corpse resource
     void UpdateMoveToCorpse()
     {
         if (targetCorpse == null || !targetCorpse.IsAvailable)
@@ -306,6 +315,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Consume corpse resources to reduce hunger
     void UpdateEatCorpse()
     {
         if (targetCorpse == null || !targetCorpse.IsAvailable)
@@ -340,6 +350,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Attack prey and feed when the prey is killed
     void UpdateAttack()
     {
         if (targetPrey == null)
@@ -375,6 +386,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Chase a valid male rival
     void UpdateChaseRival()
     {
         if (!IsValidRival(targetRival))
@@ -392,6 +404,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Bite the rival once, then retreat briefly
     void UpdateFightRival()
     {
         if (!IsValidRival(targetRival))
@@ -419,6 +432,7 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.RetreatFromRival;
     }
 
+    // Step away from a rival before attacking again
     void UpdateRetreatFromRival()
     {
         if (!IsValidRival(targetRival))
@@ -438,6 +452,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Periodically look for nearby male rivals
     void UpdateRivalAwareness()
     {
         if (IsBirthProtected)
@@ -475,6 +490,7 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.ChaseRival;
     }
 
+    // Periodically look for a valid mate
     void UpdateBreedingAwareness()
     {
         if (state == CarnivoreState.FindMate || state == CarnivoreState.MoveToMate ||
@@ -525,6 +541,7 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.MoveToMate;
     }
 
+    // Keep both genders available when population is low
     void MaintainBreedingGenderBalance()
     {
         if (!IsSearchReady(ref genderBalanceTimer, genderBalanceInterval))
@@ -542,6 +559,7 @@ public class CarnivoreAI : MonoBehaviour
         EnsureBothGendersExist(carnivores);
     }
 
+    // Find or refresh the current mate target
     void UpdateFindMate()
     {
         if (!IsSearchReady(ref breedingSearchTimer, breedingSearchInterval))
@@ -560,6 +578,7 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.MoveToMate;
     }
 
+    // Move the male toward the female mate
     void UpdateMoveToMate()
     {
         if (!IsValidMate(targetMate))
@@ -590,6 +609,7 @@ public class CarnivoreAI : MonoBehaviour
         MoveTo(targetMate.transform.position);
     }
 
+    // Complete breeding and spawn offspring from the female
     void UpdateBreed()
     {
         if (!IsValidMate(targetMate))
@@ -618,6 +638,7 @@ public class CarnivoreAI : MonoBehaviour
         mate.FinishBreeding();
     }
 
+    // Find the best reachable prey, including crowding penalty
     CreatureAI FindNearestPrey()
     {
         CreatureAI nearest = null;
@@ -654,6 +675,7 @@ public class CarnivoreAI : MonoBehaviour
         return nearest;
     }
 
+    // Find the best available corpse, including crowding penalty
     NaturalResources FindNearestCorpse()
     {
         NaturalResources nearest = null;
@@ -690,6 +712,7 @@ public class CarnivoreAI : MonoBehaviour
         return nearest;
     }
 
+    // Check whether the corpse should be preferred over live prey
     bool IsCorpseCloserThanPrey()
     {
         if (targetCorpse == null)
@@ -707,6 +730,7 @@ public class CarnivoreAI : MonoBehaviour
         return corpseDistance <= preyDistance;
     }
 
+    // Find the nearest valid rival carnivore
     CarnivoreAI FindNearestRival()
     {
         CarnivoreAI nearest = null;
@@ -738,6 +762,7 @@ public class CarnivoreAI : MonoBehaviour
         return nearest;
     }
 
+    // Find the nearest valid mate carnivore
     CarnivoreAI FindNearestMate()
     {
         CarnivoreAI nearest = null;
@@ -769,6 +794,7 @@ public class CarnivoreAI : MonoBehaviour
         return nearest;
     }
 
+    // Check whether another carnivore can be fought
     bool IsValidRival(CarnivoreAI carnivore)
     {
         if (carnivore == null || carnivore == this)
@@ -780,6 +806,7 @@ public class CarnivoreAI : MonoBehaviour
             !carnivore.isDead && !carnivore.IsBirthProtected;
     }
 
+    // Check whether another carnivore can be a mate
     bool IsValidMate(CarnivoreAI carnivore)
     {
         if (carnivore == null || carnivore == this || carnivore.isDead)
@@ -800,6 +827,7 @@ public class CarnivoreAI : MonoBehaviour
         return carnivore.CanStartOrContinueBreeding();
     }
 
+    // Check whether this carnivore can breed now
     bool CanStartOrContinueBreeding()
     {
         if (isDead)
@@ -832,6 +860,7 @@ public class CarnivoreAI : MonoBehaviour
         return true;
     }
 
+    // Convert one carnivore if a needed gender is missing
     void EnsureBothGendersExist(List<CarnivoreAI> carnivores)
     {
         bool hasMale = false;
@@ -883,6 +912,7 @@ public class CarnivoreAI : MonoBehaviour
         chosen.PickWanderTarget();
     }
 
+    // Spawn protected offspring near both parents
     void SpawnOffspringWithMate(CarnivoreAI mate)
     {
         if (offspringPrefab == null)
@@ -912,6 +942,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Clear mate state and return to wandering
     void FinishBreeding()
     {
         breedTimer = 0f;
@@ -926,6 +957,7 @@ public class CarnivoreAI : MonoBehaviour
         get { return birthProtectionTimer > 0f; }
     }
 
+    // Give newborns temporary protection from adult behaviors
     public void ApplyBirthProtection()
     {
         birthProtectionTimer = birthProtectionDuration;
@@ -934,6 +966,7 @@ public class CarnivoreAI : MonoBehaviour
         PickWanderTarget();
     }
 
+    // Send newborns away from their parents after spawning
     public void ScatterFromBirth(Vector3 parentA, Vector3 parentB)
     {
         Vector3 parentCenter = (parentA + parentB) * 0.5f;
@@ -971,6 +1004,7 @@ public class CarnivoreAI : MonoBehaviour
         PickWanderTarget();
     }
 
+    // Count down the birth protection timer
     void UpdateBirthProtection()
     {
         if (birthProtectionTimer <= 0f)
@@ -982,6 +1016,7 @@ public class CarnivoreAI : MonoBehaviour
         birthProtectionTimer = Mathf.Max(0f, birthProtectionTimer);
     }
 
+    // Choose a reachable retreat point away from the rival
     void PickRivalRetreatTarget()
     {
         rivalRetreatTimer = 0f;
@@ -1028,6 +1063,7 @@ public class CarnivoreAI : MonoBehaviour
         rivalRetreatTarget = transform.position;
     }
 
+    // Regenerate health during peaceful wandering
     void RegenerateHealthWhileWandering()
     {
         if (state != CarnivoreState.Wander || health >= maxHealth)
@@ -1039,6 +1075,7 @@ public class CarnivoreAI : MonoBehaviour
         health = Mathf.Clamp(health, 0f, maxHealth);
     }
 
+    // Update a timer and report when a search can run
     bool IsSearchReady(ref float timer, float interval)
     {
         timer += Time.deltaTime;
@@ -1052,6 +1089,7 @@ public class CarnivoreAI : MonoBehaviour
         return true;
     }
 
+    // Score how crowded a target area is with carnivores
     float GetCarnivoreCrowdingPenalty(Vector3 targetPosition)
     {
         int nearbyCount = 0;
@@ -1072,6 +1110,7 @@ public class CarnivoreAI : MonoBehaviour
         return nearbyCount * separationWeight;
     }
 
+    // Move toward a target through the shared motor
     void MoveTo(Vector3 target)
     {
         if (motor != null)
@@ -1080,6 +1119,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Stop current movement through the shared motor
     void StopMoving()
     {
         if (motor != null)
@@ -1088,6 +1128,7 @@ public class CarnivoreAI : MonoBehaviour
         }
     }
 
+    // Choose a random reachable wander target
     void PickWanderTarget()
     {
         for (int i = 0; i < 20; i++)
@@ -1114,6 +1155,7 @@ public class CarnivoreAI : MonoBehaviour
         state = CarnivoreState.Wander;
     }
 
+    // Project a point onto the NavMesh
     bool TryGetNavMeshPoint(Vector3 point, out Vector3 navMeshPoint)
     {
         if (motor == null)
@@ -1125,11 +1167,13 @@ public class CarnivoreAI : MonoBehaviour
         return motor.TryGetNavMeshPoint(point, out navMeshPoint);
     }
 
+    // Check whether this carnivore can reach a target
     bool CanReach(Vector3 target)
     {
         return motor == null || motor.CanReach(target);
     }
 
+    // Spawn a corpse and destroy this carnivore
     void Die()
     {
         if (isDead)
@@ -1147,6 +1191,7 @@ public class CarnivoreAI : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Apply damage and die if health reaches zero
     public void TakeDamage(float damage)
     {
         if (isDead)

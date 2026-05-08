@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
 public enum CreatureBehavior
@@ -58,11 +58,13 @@ public class CreatureAI : MonoBehaviour
     float predatorSearchTimer;
     bool isDead;
 
+    // Register this herbivore with the ecosystem manager
     void OnEnable()
     {
         EcosystemManager.Instance.Register(this);
     }
 
+    // Unregister this herbivore from the ecosystem manager
     void OnDisable()
     {
         if (EcosystemManager.HasInstance)
@@ -71,6 +73,7 @@ public class CreatureAI : MonoBehaviour
         }
     }
 
+    // Initialize movement and first wander target
     void Start()
     {
         motor = GetComponent<NavMeshCreatureMotor>();
@@ -84,7 +87,7 @@ public class CreatureAI : MonoBehaviour
         predatorSearchTimer = predatorSearchInterval;
         PickWanderTarget();
     }
-    // Update is called once per frame
+    // Update hunger, danger awareness, breeding, and behavior
     void Update()
     {
         if (isDead)
@@ -115,6 +118,7 @@ public class CreatureAI : MonoBehaviour
         UpdateCurrentBehavior();
     }
 
+    // Run behavior for the current herbivore state
     void UpdateCurrentBehavior()
     {
         switch (behavior)
@@ -137,6 +141,7 @@ public class CreatureAI : MonoBehaviour
         }
     }
 
+    // Wander while there is no urgent need
     void UpdateWander()
     {
         MoveTo(wanderTarget);
@@ -146,6 +151,7 @@ public class CreatureAI : MonoBehaviour
             PickWanderTarget();
         }
     }
+    // Find and move toward reachable food
     void UpdateFindFood()
     {
         if (targetFood == null || !targetFood.IsAvailable)
@@ -171,6 +177,7 @@ public class CreatureAI : MonoBehaviour
             behavior = CreatureBehavior.Eat;
         }
     }
+    // Consume food to reduce hunger
     void UpdateEat()
     {
         if (targetFood == null || !targetFood.IsAvailable)
@@ -191,6 +198,7 @@ public class CreatureAI : MonoBehaviour
         }
     }
 
+    // Move away from the nearest predator
     void UpdateFlee()
     {
         if (targetPredator == null)
@@ -219,6 +227,7 @@ public class CreatureAI : MonoBehaviour
         MoveTo(fleeTarget);
     }
 
+    // Detect stuck fleeing and choose a new escape point
     void UpdateFleeStuckCheck()
     {
         fleeStuckTimer += Time.deltaTime;
@@ -242,6 +251,7 @@ public class CreatureAI : MonoBehaviour
         PickFleeTargetAfterStuck();
     }
 
+    // Periodically search for nearby predators
     void UpdatePredatorAwareness()
     {
         if (!IsSearchReady(ref predatorSearchTimer, predatorSearchInterval))
@@ -266,6 +276,7 @@ public class CreatureAI : MonoBehaviour
         PickFleeTarget();
     }
 
+    // Find the closest reachable carnivore threat
     CarnivoreAI FindNearestPredator()
     {
         CarnivoreAI nearest = null;
@@ -285,6 +296,7 @@ public class CreatureAI : MonoBehaviour
         return nearest;
     }
 
+    // Choose an escape point away from the predator
     void PickFleeTarget()
     {
         if (targetPredator == null)
@@ -341,6 +353,7 @@ public class CreatureAI : MonoBehaviour
         behavior = CreatureBehavior.Flee;
     }
 
+    // Choose a new escape point after getting stuck
     void PickFleeTargetAfterStuck()
     {
         Vector3 baseDirection = -lastFleeMoveDirection;
@@ -376,6 +389,7 @@ public class CreatureAI : MonoBehaviour
         PickFleeTarget();
     }
 
+    // Try to find a reachable flee target in one direction
     bool TryPickFleeTargetInDirection(Vector3 direction)
     {
         direction.y = 0f;
@@ -412,6 +426,7 @@ public class CreatureAI : MonoBehaviour
         return false;
     }
 
+    // Find the closest reachable matching food resource
     NaturalResources FindNearestFood()
     {
         NaturalResources nearest = null;
@@ -441,11 +456,13 @@ public class CreatureAI : MonoBehaviour
         return nearest;
     }
 
+    // Check whether this herbivore can reach a target
     bool CanReach(Vector3 target)
     {
         return motor == null || motor.CanReach(target);
     }
 
+    // Update a timer and report when a search can run
     bool IsSearchReady(ref float timer, float interval)
     {
         timer += Time.deltaTime;
@@ -459,6 +476,7 @@ public class CreatureAI : MonoBehaviour
         return true;
     }
 
+    // Move toward a target through the shared motor
     void MoveTo(Vector3 target)
     {
         if (motor != null)
@@ -467,6 +485,7 @@ public class CreatureAI : MonoBehaviour
         }
     }
 
+    // Choose a random reachable wander target
     void PickWanderTarget()
     {
         for (int i = 0; i < 20; i++)
@@ -493,6 +512,7 @@ public class CreatureAI : MonoBehaviour
         behavior = CreatureBehavior.Wander;
     }
 
+    // Project a point onto the NavMesh
     bool TryGetNavMeshPoint(Vector3 point, out Vector3 navMeshPoint)
     {
         if (motor == null)
@@ -504,6 +524,7 @@ public class CreatureAI : MonoBehaviour
         return motor.TryGetNavMeshPoint(point, out navMeshPoint);
     }
 
+    // Spawn a corpse and destroy this herbivore
     void Die()
     {
         isDead = true;
@@ -520,6 +541,7 @@ public class CreatureAI : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // External death entry point used by predators
     public void Kill()
     {
         if (isDead)
@@ -530,6 +552,7 @@ public class CreatureAI : MonoBehaviour
         Die();
     }
 
+    // Spawn offspring when hunger, cooldown, and population allow it
     void TryBreed()
     {
         if (offspringPrefab == null)
@@ -562,6 +585,7 @@ public class CreatureAI : MonoBehaviour
         Instantiate(offspringPrefab, spawnPosition, transform.rotation, transform.parent);
         breedTimer = 0f;
     }
+    // Count nearby herbivores for local population limits
     int CountLocalPopulation()
     {
         int count = 0;
@@ -583,6 +607,7 @@ public class CreatureAI : MonoBehaviour
 
         return count;
     }
+    // Find a reachable spawn point near this herbivore
     bool TryGetSpawnNearSelf(out Vector3 spawnPosition)
     {
         for (int i = 0; i < 20; i++)

@@ -25,6 +25,7 @@ public class DungeonNode
     [System.NonSerialized]
     public Transform roomTransform;
 
+    // Store the logical data for one dungeon graph node
     public DungeonNode(int id,RoomType type,int depth,bool isMainPath)
     {
         this.id = id;

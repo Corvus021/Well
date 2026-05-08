@@ -1,15 +1,17 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
 public class NavMeshCreatureMotor : MonoBehaviour
 {
     NavMeshAgent agent;
 
+    // Cache the NavMeshAgent component.
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
     }
 
+    // Move with NavMeshAgent, or fallback to direct movement.
     public void MoveTo(Vector3 target, float fallbackSpeed)
     {
         if (agent != null && agent.isOnNavMesh)
@@ -30,6 +32,7 @@ public class NavMeshCreatureMotor : MonoBehaviour
         transform.forward = direction.normalized;
     }
 
+    // Stop the current NavMeshAgent path.
     public void Stop()
     {
         if (agent != null && agent.isOnNavMesh)
@@ -38,6 +41,7 @@ public class NavMeshCreatureMotor : MonoBehaviour
         }
     }
 
+    // Project a point onto a nearby NavMesh position.
     public bool TryGetNavMeshPoint(Vector3 point, out Vector3 navMeshPoint, float sampleRadius = 2f)
     {
         if (NavMesh.SamplePosition(point, out NavMeshHit hit, sampleRadius, NavMesh.AllAreas))
@@ -50,6 +54,7 @@ public class NavMeshCreatureMotor : MonoBehaviour
         return false;
     }
 
+    // Check whether the NavMesh path to a target is complete.
     public bool CanReach(Vector3 target)
     {
         if (agent == null || !agent.isOnNavMesh)

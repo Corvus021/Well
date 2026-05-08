@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,11 +9,13 @@ public class Contact : MonoBehaviour
 
     private bool isPlaying;
 
+    // Mark runtime state for gizmo coloring.
     void Start()
     {
         isPlaying = true;
     }
 
+    // Draw the room connection area in the Scene view.
     void OnDrawGizmos()
     {
         Gizmos.color = isConnected ? Color.green : Color.red;

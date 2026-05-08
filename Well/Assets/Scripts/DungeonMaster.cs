@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 using Unity.AI.Navigation;
 using UnityEngine.AI;
 
-public enum DungeonGenerator
+public enum DungeonGenerator//Generation process
 {
     inactive,
     generatingMain,
@@ -46,7 +46,6 @@ public class DungeonMaster : MonoBehaviour
 
     [Header("Key Options")]
     public KeyCode reloadKey = KeyCode.F;
-    public KeyCode changeMapKey = KeyCode.R;
 
     [Header("Ceneration Limits")]
     [Range(2,100)] [SerializeField] int mainLength = 10;
@@ -70,17 +69,21 @@ public class DungeonMaster : MonoBehaviour
     int attempts;
     int maxAttempts = 50;
 
+    // Start the dungeon build coroutine
     void Start()
     {
         StartCoroutine(DungeonBuild());
     }
+    // Handle runtime dungeon reload input
     void Update()
     {
+        //reload map
         if (Input.GetKeyDown(reloadKey))
         {
             SceneManager.LoadScene("Map");
         }
     }
+    // Build the full dungeon, navigation mesh, and ecosystem
     IEnumerator DungeonBuild()
     {
         List<DungeonNode> mainPathGraph = BuildMainPathGraph();
@@ -200,6 +203,7 @@ public class DungeonMaster : MonoBehaviour
         dungeonGenerator = DungeonGenerator.completed;
         yield return null;
     }
+    // Create a graph node for one logical room
     DungeonNode CreateNode(RoomType type,int depth,bool isMainPath)
     {
         DungeonNode node = new DungeonNode(nextNodeID, type, depth, isMainPath);
@@ -207,6 +211,7 @@ public class DungeonMaster : MonoBehaviour
         dungeonNodes.Add(node);
         return node;
     }
+    // Find the graph node bound to a room transform
     DungeonNode FindNodeByRoom(Transform room)
     {
         if (room == null)
@@ -223,6 +228,7 @@ public class DungeonMaster : MonoBehaviour
 
         return null;
     }
+    // Connect two dungeon graph nodes in both directions
     void ConnectNodes(DungeonNode from,DungeonNode to)
     {
         if(!from.connections.Contains(to))
@@ -250,6 +256,7 @@ public class DungeonMaster : MonoBehaviour
 
         return RoomType.Advanced;
     }
+    // Create the main path graph from start to boss room
     List<DungeonNode> BuildMainPathGraph()
     {
         dungeonNodes.Clear();
@@ -324,6 +331,7 @@ public class DungeonMaster : MonoBehaviour
 
         return RoomType.Beginner;
     }
+    // Instantiate a room prefab that matches a node type
     Transform CreateRoomForNode(DungeonNode node)
     {
         switch (node.type)
@@ -356,6 +364,7 @@ public class DungeonMaster : MonoBehaviour
                 return CreateRandomRoom();
         }
     }
+    // Instantiate a random prefab from a room list
     Transform CreateRoomFromList(GameObject[] roomList)
     {
         int index = Random.Range(0, roomList.Length);
@@ -367,6 +376,7 @@ public class DungeonMaster : MonoBehaviour
 
         return tile.transform;
     }
+    // Tint room lights based on node type for debugging
     void DebugRoomLightingForNode(Transform tile, DungeonNode node)
     {
         switch (node.type)
@@ -400,6 +410,7 @@ public class DungeonMaster : MonoBehaviour
                 break;
         }
     }
+    // Bind a logical node to its spawned room
     void BindNodeToRoom(DungeonNode node, Transform room)
     {
         if (node != null)
@@ -417,6 +428,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Place doors on connected room contacts
     void GenerateDoors()
     {
         if(doorPercent > 0)
@@ -445,6 +457,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Block unused room contacts with wall prefabs
     void BlockedPassages()
     {
         foreach(Contact contact in transform.GetComponentsInChildren<Contact>())
@@ -458,6 +471,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Check whether the latest room overlaps existing rooms
     void CollisionCheck(DungeonNode node)
     {
         BoxCollider box = tileTo.GetComponent<BoxCollider>();
@@ -473,7 +487,7 @@ public class DungeonMaster : MonoBehaviour
         {
             if(hits.Exists(x=>x.transform!=tileFrom&&x.transform!=tileTo))
             {
-                //his somethings not tileFrom or tileTo
+                //this somethings not tileFrom or tileTo
                 attempts++;
                 int toIndex = generatedTiles.FindIndex(x => x.tile == tileTo);
 
@@ -567,6 +581,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Remove graph nodes that did not get a valid room
     void RemoveUnboundNodesFromGraph()
     {
         List<DungeonNode> unboundNodes = dungeonNodes.Where(node => node.roomTransform == null).ToList();
@@ -589,6 +604,7 @@ public class DungeonMaster : MonoBehaviour
 
         Debug.Log("Dungeon graph cleanup removed unbound nodes: " + unboundNodes.Count);
     }
+    // Log warnings for graph nodes with no connections
     void WarnIsolatedNodes()
     {
         foreach (DungeonNode node in dungeonNodes)
@@ -599,6 +615,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Restore generated room lights to the default color
     void RestoreLight()
     {
         if(useLights && restoreLights && Application.isEditor)
@@ -610,6 +627,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Remove helper collider boxes after generation
     void DeleteBoxes()
     {
         if(!useColliders)
@@ -624,6 +642,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Apply a debug light color inside a room
     void DebugRoomLighting(Transform tile, Color lightColor)
     {
         //Application.isEditor : enable this feature in the editor only
@@ -643,6 +662,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Align and connect two room contact points
     void ConnectTiles()
     {
         Transform connectFrom = GetRandomConnect(tileFrom);
@@ -664,6 +684,7 @@ public class DungeonMaster : MonoBehaviour
         connectTo.SetParent(tileTo.Find("Contactor"));
         generatedTiles.Last().contact = connectFrom.GetComponent<Contact>();
     }
+    // Pick a random unused contact from a room
     Transform GetRandomConnect(Transform tile)
     {
         if(tile==null)
@@ -688,6 +709,7 @@ public class DungeonMaster : MonoBehaviour
         }
         return null;
     }
+    // Instantiate a random start room prefab
     Transform CreateStartRoom()
     {
         int index = Random.Range(0, startRoom.Length);//the max number not in this range.(0,3)->got 0,1 or 2
@@ -699,6 +721,7 @@ public class DungeonMaster : MonoBehaviour
         generatedTiles.Add(new Tile(tile.transform, null));
         return tile.transform;
     }
+    // Instantiate a random end room prefab
     Transform CreateEndRoom()
     {
         int index = Random.Range(0, endRoom.Length);
@@ -708,6 +731,7 @@ public class DungeonMaster : MonoBehaviour
         generatedTiles.Add(new Tile(tile.transform, origin));
         return tile.transform;
     }
+    // Instantiate a random generic room prefab
     Transform CreateRandomRoom()
     {
         int index = Random.Range(0, randomRoom.Length);
@@ -717,6 +741,7 @@ public class DungeonMaster : MonoBehaviour
         generatedTiles.Add(new Tile(tile.transform, origin));
         return tile.transform;
     }
+    // Build the NavMesh after dungeon generation finishes
     void BuildNavigationMesh()
     {
         if (navMeshSurface == null)
@@ -727,6 +752,7 @@ public class DungeonMaster : MonoBehaviour
 
         navMeshSurface.BuildNavMesh();
     }
+    // Spawn scavenger storage in the end room
     void GenerateScavengerStorage()
     {
         if (scavengerStoragePrefab == null)
@@ -745,6 +771,7 @@ public class DungeonMaster : MonoBehaviour
 
         SpawnInRoom(scavengerStoragePrefab, bossNode.roomTransform);
     }
+    // Spawn plants and creatures based on generated rooms
     void GenerateEcosystem()
     {
         foreach (DungeonNode node in dungeonNodes)
@@ -784,6 +811,7 @@ public class DungeonMaster : MonoBehaviour
                 SpawnInRoom(scavengerPrefab, node.roomTransform);
             }
         }
+        // Choose plant count for a room type
         int GetPlantCountForRoom(RoomType type)
         {
             switch (type)
@@ -808,6 +836,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
 
+        // Choose herbivore count for a room type
         int GetHerbivoreCountForRoom(RoomType type)
         {
             switch (type)
@@ -825,6 +854,7 @@ public class DungeonMaster : MonoBehaviour
                     return 0;
             }
         }
+        // Choose carnivore count for a room type
         int GetCarnivoreCountForRoom(RoomType type)
         {
             switch (type)
@@ -839,6 +869,7 @@ public class DungeonMaster : MonoBehaviour
                     return 0;
             }
         }
+        // Choose scavenger count for a room type
         int GetScavengerCountForRoom(RoomType type)
         {
             switch (type)
@@ -854,6 +885,7 @@ public class DungeonMaster : MonoBehaviour
             }
         }
     }
+    // Spawn one ecosystem prefab at a valid point in a room
     GameObject SpawnInRoom(GameObject prefab, Transform room)
     {
         if (prefab == null || room == null)
@@ -872,6 +904,7 @@ public class DungeonMaster : MonoBehaviour
         return spawned;
     }
 
+    // Find a valid NavMesh spawn position inside a room
     bool TryGetSpawnPositionInRoom(Transform room, out Vector3 position)
     {
         position = Vector3.zero;
@@ -916,6 +949,7 @@ public class DungeonMaster : MonoBehaviour
         return false;
     }
 
+    // Snap a spawned creature or resource onto the NavMesh
     void SnapSpawnedObjectToNavMesh(GameObject spawned)
     {
         if (spawned == null)
@@ -939,6 +973,9 @@ public class DungeonMaster : MonoBehaviour
         spawned.transform.position = hit.position;
     }
 }
+
+
+
 
 
 

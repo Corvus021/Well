@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public enum ResourceType
 {
@@ -9,7 +9,7 @@ public enum ResourceType
 }
 public class NaturalResources : MonoBehaviour
 {
-    public ResourceType resourceType = ResourceType.Plant;//
+    public ResourceType resourceType = ResourceType.Plant;
 
     public float amount = 10f;
     public float maxAmount = 10f;
@@ -22,11 +22,13 @@ public class NaturalResources : MonoBehaviour
 
     float emptyTime;
 
+    // Register this resource with the ecosystem manager
     void OnEnable()
     {
         EcosystemManager.Instance.Register(this);
     }
 
+    // Unregister this resource from the ecosystem manager
     void OnDisable()
     {
         if (EcosystemManager.HasInstance)
@@ -39,7 +41,7 @@ public class NaturalResources : MonoBehaviour
     {
         get { return amount > 0f; }
     }
-    // Update is called once per frame
+    // Regrow plant resources over time
     void Update()
     {
         if (resourceType != ResourceType.Plant)
@@ -62,18 +64,21 @@ public class NaturalResources : MonoBehaviour
         amount = Mathf.Clamp(amount, 0f, maxAmount);
         UpdateVisual();
     }
+    // Consume resource amount and return the amount taken
     public float Consume(float value)
     {
         float consumed = Mathf.Min(amount, value);
         amount -= consumed;
         return consumed;
     }
+    // Scale the object based on remaining resource amount
     void UpdateVisual()
     {
         float scale = Mathf.Lerp(0.2f, 1f, amount / maxAmount);
         transform.localScale = Vector3.one * scale;
     }
 
+    // Calculate regrowth speed, boosted by nearby corpses
     float GetCurrentRegrowRate()
     {
         if (resourceType != ResourceType.Plant)

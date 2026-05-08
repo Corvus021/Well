@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public enum ScavengerState
 {
@@ -36,11 +36,13 @@ public class ScavengerAI : MonoBehaviour
     float corpseSearchTimer;
     float storageSearchTimer;
 
+    // Register this scavenger with the ecosystem manager
     void OnEnable()
     {
         EcosystemManager.Instance.Register(this);
     }
 
+    // Unregister this scavenger from the ecosystem manager
     void OnDisable()
     {
         if (EcosystemManager.HasInstance)
@@ -49,6 +51,7 @@ public class ScavengerAI : MonoBehaviour
         }
     }
 
+    // Initialize movement, storage target, and first wander point
     void Start()
     {
         motor = GetComponent<NavMeshCreatureMotor>();
@@ -64,6 +67,7 @@ public class ScavengerAI : MonoBehaviour
         PickWanderTarget();
     }
 
+    // Run the current scavenger state
     void Update()
     {
         switch (state)
@@ -90,6 +94,7 @@ public class ScavengerAI : MonoBehaviour
         }
     }
 
+    // Wander and periodically search for corpses
     void UpdateWander()
     {
         MoveTo(wanderTarget);
@@ -100,6 +105,7 @@ public class ScavengerAI : MonoBehaviour
         }
     }
 
+    // Find a corpse target or return to wandering
     void UpdateFindCorpse()
     {
         if (!IsSearchReady(ref corpseSearchTimer, corpseSearchInterval))
@@ -118,6 +124,7 @@ public class ScavengerAI : MonoBehaviour
         state = ScavengerState.MoveToCorpse;
     }
 
+    // Move to the selected corpse and pick it up
     void UpdateMoveToCorpse()
     {
         if (targetCorpse == null || !targetCorpse.IsAvailable)
@@ -136,6 +143,7 @@ public class ScavengerAI : MonoBehaviour
         }
     }
 
+    // Carry the corpse toward storage
     void UpdateCarryCorpseToStorage()
     {
         if (storage == null)
@@ -158,6 +166,7 @@ public class ScavengerAI : MonoBehaviour
         }
     }
 
+    // Deliver carried corpse value to storage
     void UpdateDeliverCorpse()
     {
         if (storage != null)
@@ -175,6 +184,7 @@ public class ScavengerAI : MonoBehaviour
         state = ScavengerState.FindCorpse;
     }
 
+    // Find the nearest available corpse resource
     NaturalResources FindNearestCorpse()
     {
         NaturalResources nearest = null;
@@ -199,6 +209,7 @@ public class ScavengerAI : MonoBehaviour
         return nearest;
     }
 
+    // Find the nearest scavenger storage
     ScavengerStorage FindNearestStorage()
     {
         ScavengerStorage nearest = null;
@@ -223,6 +234,7 @@ public class ScavengerAI : MonoBehaviour
         return nearest;
     }
 
+    // Move toward a target through the shared motor
     void MoveTo(Vector3 target)
     {
         if (motor != null)
@@ -231,6 +243,7 @@ public class ScavengerAI : MonoBehaviour
         }
     }
 
+    // Update a timer and report when a search can run
     bool IsSearchReady(ref float timer, float interval)
     {
         timer += Time.deltaTime;
@@ -244,6 +257,7 @@ public class ScavengerAI : MonoBehaviour
         return true;
     }
 
+    // Attach a corpse to this scavenger for visible carrying
     void PickUpCorpse(NaturalResources corpse)
     {
         if (corpse == null)
@@ -268,6 +282,7 @@ public class ScavengerAI : MonoBehaviour
         carriedCorpseObject.transform.localRotation = Quaternion.identity;
     }
 
+    // Choose a random reachable wander target
     void PickWanderTarget()
     {
         Vector2 random = Random.insideUnitCircle * wanderRadius;
